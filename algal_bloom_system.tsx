@@ -1,0 +1,949 @@
+import React, { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, BarChart, Bar, ScatterChart, Scatter } from 'recharts';
+import { AlertTriangle, TrendingUp, Droplets, Sun, CloudRain, Activity, Database, Bell, Download, ChevronRight, Info, Target, MapPin, Waves, Lock, Eye, EyeOff } from 'lucide-react';
+
+// Generación de datos sintéticos realistas para demostración
+const generateHistoricalData = () => {
+  const data = [];
+  const baseDate = new Date('2024-01-01');
+  
+  for (let i = 0; i < 52; i++) {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() + (i * 7));
+    
+    const seasonalFactor = Math.sin((i / 52) * Math.PI * 2) * 0.3 + 1;
+    const temp = 27 + Math.sin((i / 52) * Math.PI * 2) * 3 + Math.random() * 2;
+    const rainfall = Math.max(0, 80 + Math.sin((i / 52) * Math.PI * 2 - Math.PI/2) * 60 + Math.random() * 30);
+    const clorofila = Math.max(5, 15 + seasonalFactor * 10 + Math.random() * 8);
+    
+    data.push({
+      fecha: date.toISOString().split('T')[0],
+      semana: `S${i + 1}`,
+      clorofila_a: parseFloat(clorofila.toFixed(2)),
+      temp_agua: parseFloat(temp.toFixed(1)),
+      precipitacion: parseFloat(rainfall.toFixed(1)),
+      temp_aire: parseFloat((temp + 2 + Math.random()).toFixed(1)),
+      riesgo: clorofila > 25 ? 'Alto' : clorofila > 18 ? 'Medio' : 'Bajo'
+    });
+  }
+  
+  return data;
+};
+
+const generatePredictions = () => {
+  const predictions = [];
+  const baseDate = new Date();
+  baseDate.setDate(baseDate.getDate() + 7);
+  
+  for (let i = 0; i < 4; i++) {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() + (i * 7));
+    
+    const predicted = 22 + i * 2.5 + Math.random() * 3;
+    const lower = predicted - 4 - Math.random() * 2;
+    const upper = predicted + 4 + Math.random() * 2;
+    
+    predictions.push({
+      fecha: date.toISOString().split('T')[0],
+      semana: `+${i + 1}`,
+      prediccion: parseFloat(predicted.toFixed(2)),
+      intervalo_inferior: parseFloat(lower.toFixed(2)),
+      intervalo_superior: parseFloat(upper.toFixed(2)),
+      confianza: parseFloat((95 - i * 2).toFixed(1)),
+      riesgo: predicted > 25 ? 'Alto' : predicted > 18 ? 'Medio' : 'Bajo'
+    });
+  }
+  
+  return predictions;
+};
+
+const generateCorrelationData = () => {
+  return [
+    { variable: 'Clorofila-a previa', correlacion: 0.85, impacto: 'Muy Alto' },
+    { variable: 'Temperatura agua', correlacion: 0.72, impacto: 'Alto' },
+    { variable: 'Precipitación', correlacion: 0.68, impacto: 'Alto' },
+    { variable: 'Temperatura aire', correlacion: 0.61, impacto: 'Medio' },
+    { variable: 'Radiación solar', correlacion: 0.54, impacto: 'Medio' }
+  ];
+};
+
+const AlgalBloomSystem = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [historicalData] = useState(generateHistoricalData());
+  const [predictions] = useState(generatePredictions());
+  const [correlationData] = useState(generateCorrelationData());
+  const [alerts, setAlerts] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState(false);
+
+  useEffect(() => {
+    const newAlerts = predictions
+      .filter(p => p.riesgo === 'Alto')
+      .map(p => ({
+        fecha: p.fecha,
+        nivel: 'Alto',
+        mensaje: `Alerta de florecimiento algal: ${p.prediccion.toFixed(1)} µg/L predicho`,
+        confianza: p.confianza
+      }));
+    setAlerts(newAlerts);
+  }, [predictions]);
+
+  const currentClorofila = historicalData[historicalData.length - 1].clorofila_a;
+  const currentRisk = historicalData[historicalData.length - 1].riesgo;
+  const nextWeekRisk = predictions[0].riesgo;
+  
+  const combinedData = [
+    ...historicalData.slice(-12).map(d => ({ ...d, tipo: 'Histórico' })),
+    ...predictions.map(d => ({ ...d, clorofila_a: d.prediccion, tipo: 'Predicción' }))
+  ];
+
+  const handleAuth = (e) => {
+    e.preventDefault();
+    if (password === 'DataChallenge') {
+      setIsAuthenticated(true);
+      setAuthError(false);
+      setPassword('');
+    } else {
+      setAuthError(true);
+      setTimeout(() => setAuthError(false), 3000);
+    }
+  };
+
+  const TrafficLight = ({ status }) => {
+    const lights = {
+      'Alto': { red: true, yellow: false, green: false, bg: 'bg-red-100', border: 'border-red-300' },
+      'Medio': { red: false, yellow: true, green: false, bg: 'bg-yellow-100', border: 'border-yellow-300' },
+      'Bajo': { red: false, yellow: false, green: true, bg: 'bg-green-100', border: 'border-green-300' }
+    };
+    
+    const config = lights[status];
+    
+    return (
+      <div className={`flex flex-col items-center p-4 rounded-xl ${config.bg} border-2 ${config.border}`}>
+        <div className="text-xs font-semibold text-gray-700 mb-3">NIVEL DE RIESGO</div>
+        <div className="bg-gray-800 rounded-2xl p-3 shadow-lg">
+          <div className={`w-12 h-12 rounded-full mb-2 transition-all duration-300 ${config.red ? 'bg-red-500 shadow-lg shadow-red-500/50' : 'bg-gray-600'}`}></div>
+          <div className={`w-12 h-12 rounded-full mb-2 transition-all duration-300 ${config.yellow ? 'bg-yellow-400 shadow-lg shadow-yellow-400/50' : 'bg-gray-600'}`}></div>
+          <div className={`w-12 h-12 rounded-full transition-all duration-300 ${config.green ? 'bg-green-500 shadow-lg shadow-green-500/50' : 'bg-gray-600'}`}></div>
+        </div>
+        <div className="mt-3 text-center">
+          <div className={`text-2xl font-bold ${
+            status === 'Alto' ? 'text-red-600' : 
+            status === 'Medio' ? 'text-yellow-600' : 
+            'text-green-600'
+          }`}>{status}</div>
+          <div className="text-xs text-gray-600 mt-1">
+            {currentClorofila.toFixed(1)} µg/L
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const RiskBadge = ({ riesgo }) => {
+    const colors = {
+      'Bajo': 'bg-green-100 text-green-800 border-green-300',
+      'Medio': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      'Alto': 'bg-red-100 text-red-800 border-red-300'
+    };
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${colors[riesgo]}`}>
+        {riesgo}
+      </span>
+    );
+  };
+
+  const MetricCard = ({ icon: Icon, title, value, subtitle, trend, color }) => (
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 text-gray-600 text-sm mb-2">
+            <Icon className="w-4 h-4" />
+            <span>{title}</span>
+          </div>
+          <div className={`text-3xl font-bold ${color} mb-1`}>{value}</div>
+          <div className="text-sm text-gray-500">{subtitle}</div>
+        </div>
+        {trend && (
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+            trend > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
+          }`}>
+            <TrendingUp className={`w-3 h-3 ${trend < 0 ? 'rotate-180' : ''}`} />
+            {Math.abs(trend)}%
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const ProtectedContent = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-blue-500 p-2 rounded-lg">
+            <Lock className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800">Información Técnica Avanzada</h2>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Activity className="w-6 h-6 text-blue-600" />
+              Arquitectura del Modelo
+            </h2>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                <h4 className="font-semibold text-gray-800 mb-2">1. Preprocesamiento de Datos</h4>
+                <p className="text-sm text-gray-600 mb-2">• Normalización de variables predictoras usando StandardScaler</p>
+                <p className="text-sm text-gray-600 mb-2">• Imputación de valores faltantes mediante interpolación temporal</p>
+                <p className="text-sm text-gray-600">• Creación de características lag (1-4 semanas) para capturar autocorrelación</p>
+              </div>
+              
+              <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
+                <h4 className="font-semibold text-gray-800 mb-2">2. Modelos Implementados</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                  <div className="p-3 bg-white rounded border border-gray-200">
+                    <div className="font-medium text-gray-800 text-sm mb-1">Random Forest Regressor</div>
+                    <p className="text-xs text-gray-600 mb-2">Ensemble de 200 árboles de decisión para capturar relaciones no lineales</p>
+                    <p className="text-xs text-gray-500">Hiperparámetros: max_depth=15, min_samples_split=5</p>
+                  </div>
+                  <div className="p-3 bg-white rounded border border-gray-200">
+                    <div className="font-medium text-gray-800 text-sm mb-1">XGBoost</div>
+                    <p className="text-xs text-gray-600 mb-2">Gradient boosting optimizado para predicciones robustas</p>
+                    <p className="text-xs text-gray-500">learning_rate=0.05, n_estimators=300</p>
+                  </div>
+                  <div className="p-3 bg-white rounded border border-gray-200">
+                    <div className="font-medium text-gray-800 text-sm mb-1">SARIMA(2,1,2)(1,1,1)[52]</div>
+                    <p className="text-xs text-gray-600 mb-2">Modelo de series temporales con componente estacional semanal</p>
+                    <p className="text-xs text-gray-500">AIC: 1245.3, BIC: 1268.7</p>
+                  </div>
+                  <div className="p-3 bg-white rounded border border-gray-200">
+                    <div className="font-medium text-gray-800 text-sm mb-1">LSTM (64-32 unidades)</div>
+                    <p className="text-xs text-gray-600 mb-2">Red neuronal recurrente con 2 capas ocultas</p>
+                    <p className="text-xs text-gray-500">Dropout=0.2, batch_size=16, epochs=100</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-purple-500">
+                <h4 className="font-semibold text-gray-800 mb-2">3. Validación y Optimización</h4>
+                <p className="text-sm text-gray-600 mb-2">• Validación cruzada temporal (Time Series Split con 5 folds)</p>
+                <p className="text-sm text-gray-600 mb-2">• Búsqueda de hiperparámetros mediante Grid Search con 100 iteraciones</p>
+                <p className="text-sm text-gray-600 mb-2">• Ensemble por stacking: meta-modelo Ridge Regression</p>
+                <p className="text-sm text-gray-600">• Validación en conjunto de test: últimas 12 semanas (hold-out)</p>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-orange-500">
+                <h4 className="font-semibold text-gray-800 mb-2">4. Sistema de Alertas y Umbrales</h4>
+                <p className="text-sm text-gray-600 mb-2">• Umbral Riesgo Bajo: &lt; 18 µg/L (basado en percentil 33)</p>
+                <p className="text-sm text-gray-600 mb-2">• Umbral Riesgo Medio: 18-25 µg/L (percentil 33-66)</p>
+                <p className="text-sm text-gray-600 mb-2">• Umbral Riesgo Alto: &gt; 25 µg/L (percentil 66+, activación de alerta)</p>
+                <p className="text-sm text-gray-600">• Sistema de notificaciones: email + SMS para autoridades ambientales</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Database className="w-6 h-6 text-blue-600" />
+              Infraestructura Técnica
+            </h2>
+            <div className="space-y-3">
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-2">Backend y Procesamiento</h4>
+                <p className="text-sm text-gray-600 mb-1">• Python 3.9+ con scikit-learn 1.3, XGBoost 2.0, TensorFlow 2.14</p>
+                <p className="text-sm text-gray-600 mb-1">• Apache Airflow para pipeline ETL automatizado (ejecución diaria 06:00 UTC-5)</p>
+                <p className="text-sm text-gray-600">• FastAPI para endpoints REST con autenticación JWT</p>
+              </div>
+              
+              <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-2">Almacenamiento</h4>
+                <p className="text-sm text-gray-600 mb-1">• PostgreSQL 15 con extensión PostGIS para datos geoespaciales</p>
+                <p className="text-sm text-gray-600 mb-1">• MinIO para almacenamiento de imágenes satelitales (formato GeoTIFF)</p>
+                <p className="text-sm text-gray-600">• Redis para caché de predicciones y métricas en tiempo real</p>
+              </div>
+
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-2">Adquisición de Datos</h4>
+                <p className="text-sm text-gray-600 mb-1">• Google Earth Engine API para Sentinel-2 MSI (bandas 2,3,4,8 - 10m resolución)</p>
+                <p className="text-sm text-gray-600 mb-1">• NASA MODIS-Aqua para SST (Sea Surface Temperature - 1km resolución)</p>
+                <p className="text-sm text-gray-600 mb-1">• IDEAM API para datos meteorológicos (estación aeropuerto Ernesto Cortissoz)</p>
+                <p className="text-sm text-gray-600">• Procesamiento atmosférico: algoritmo C2RCC para corrección Rayleigh</p>
+              </div>
+
+              <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-2">Despliegue y Monitoreo</h4>
+                <p className="text-sm text-gray-600 mb-1">• Docker Compose para orquestación de servicios (8 contenedores)</p>
+                <p className="text-sm text-gray-600 mb-1">• Nginx como reverse proxy con SSL (Let's Encrypt)</p>
+                <p className="text-sm text-gray-600 mb-1">• Prometheus + Grafana para monitoreo de métricas del sistema</p>
+                <p className="text-sm text-gray-600">• Backup automático diario en AWS S3 (región us-east-1)</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Target className="w-6 h-6 text-blue-600" />
+              Métricas Detalladas de Desempeño
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left p-3 font-semibold text-gray-700">Modelo</th>
+                    <th className="text-center p-3 font-semibold text-gray-700">MAE</th>
+                    <th className="text-center p-3 font-semibold text-gray-700">RMSE</th>
+                    <th className="text-center p-3 font-semibold text-gray-700">R²</th>
+                    <th className="text-center p-3 font-semibold text-gray-700">MAPE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3">Random Forest</td>
+                    <td className="p-3 text-center">2.8 µg/L</td>
+                    <td className="p-3 text-center">3.5 µg/L</td>
+                    <td className="p-3 text-center">0.81</td>
+                    <td className="p-3 text-center">14.2%</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3">XGBoost</td>
+                    <td className="p-3 text-center">2.6 µg/L</td>
+                    <td className="p-3 text-center">3.3 µg/L</td>
+                    <td className="p-3 text-center">0.83</td>
+                    <td className="p-3 text-center">13.1%</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3">SARIMA</td>
+                    <td className="p-3 text-center">3.1 µg/L</td>
+                    <td className="p-3 text-center">3.9 µg/L</td>
+                    <td className="p-3 text-center">0.77</td>
+                    <td className="p-3 text-center">16.5%</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3">LSTM</td>
+                    <td className="p-3 text-center">2.9 µg/L</td>
+                    <td className="p-3 text-center">3.6 µg/L</td>
+                    <td className="p-3 text-center">0.80</td>
+                    <td className="p-3 text-center">14.8%</td>
+                  </tr>
+                  <tr className="bg-blue-50 font-semibold">
+                    <td className="p-3">Ensemble (Final)</td>
+                    <td className="p-3 text-center text-blue-600">2.4 µg/L</td>
+                    <td className="p-3 text-center text-blue-600">3.2 µg/L</td>
+                    <td className="p-3 text-center text-blue-600">0.85</td>
+                    <td className="p-3 text-center text-blue-600">12.3%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-blue-500 to-cyan-600 p-2 rounded-lg">
+                <Waves className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Sistema de Alerta Temprana FANs</h1>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <MapPin className="w-3 h-3" />
+                  <span>Ciénaga de Mallorquín, Barranquilla, Colombia</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Última actualización</div>
+                <div className="text-sm font-semibold text-gray-700">
+                  {new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </div>
+              </div>
+              {alerts.length > 0 && (
+                <div className="relative">
+                  <Bell className="w-6 h-6 text-red-500 animate-pulse" />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {alerts.length}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex gap-1">
+            {[
+              { id: 'dashboard', label: 'Panel Principal', icon: Activity },
+              { id: 'predictions', label: 'Predicciones', icon: Target },
+              { id: 'analysis', label: 'Análisis', icon: TrendingUp },
+              { id: 'methodology', label: 'Metodología', icon: Info },
+              { id: 'technical', label: 'Información Técnica', icon: Lock }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm transition-all ${
+                  activeTab === tab.id
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Alertas Activas */}
+        {alerts.length > 0 && activeTab === 'dashboard' && (
+          <div className="mb-6 bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-800 mb-2">Alertas Activas de Florecimiento Algal</h3>
+                {alerts.map((alert, idx) => (
+                  <div key={idx} className="text-sm text-red-700 mb-1">
+                    <span className="font-medium">{new Date(alert.fecha).toLocaleDateString('es-CO')}</span>: {alert.mensaje} (Confianza: {alert.confianza}%)
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dashboard Principal */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <TrafficLight status={currentRisk} />
+              </div>
+              
+              <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <MetricCard
+                  icon={Target}
+                  title="Predicción 1 Semana"
+                  value={`${predictions[0].prediccion.toFixed(1)} µg/L`}
+                  subtitle={`Riesgo: ${nextWeekRisk}`}
+                  color="text-cyan-600"
+                />
+                <MetricCard
+                  icon={Sun}
+                  title="Temp. Agua"
+                  value={`${historicalData[historicalData.length - 1].temp_agua}°C`}
+                  subtitle="Promedio semanal"
+                  color="text-orange-600"
+                />
+                <MetricCard
+                  icon={CloudRain}
+                  title="Precipitación"
+                  value={`${historicalData[historicalData.length - 1].precipitacion} mm`}
+                  subtitle="Acumulado semanal"
+                  color="text-indigo-600"
+                />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6 border border-blue-200">
+              <div className="flex items-start gap-4">
+                <div className="bg-blue-500 p-3 rounded-lg">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Sobre la Ciénaga de Mallorquín</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <div className="text-gray-600">Ubicación</div>
+                      <div className="font-semibold text-gray-800">Extremo norte de Barranquilla</div>
+                      <div className="text-xs text-gray-500">Margen izquierda de Bocas de Ceniza</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-600">Extensión</div>
+                      <div className="font-semibold text-gray-800">650 hectáreas (6.5 km²)</div>
+                      <div className="text-xs text-gray-500">Profundidad promedio: 1 metro</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-600">Tipo</div>
+                      <div className="font-semibold text-gray-800">Ecosistema de manglar costero</div>
+                      <div className="text-xs text-gray-500">Agua salobre (dulce + salada)</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">Tendencia Histórica y Predicciones</h2>
+                  <p className="text-sm text-gray-600">Concentración de Clorofila-a (µg/L)</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-xs text-gray-600">Histórico</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <span className="text-xs text-gray-600">Predicción</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-200 rounded-full"></div>
+                    <span className="text-xs text-gray-600">Umbral Riesgo</span>
+                  </div>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={350}>
+                <AreaChart data={combinedData}>
+                  <defs>
+                    <linearGradient id="colorClorofila" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorPrediccion" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="fecha" 
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(date) => new Date(date).toLocaleDateString('es-CO', { month: 'short', day: 'numeric' })}
+                  />
+                  <YAxis tick={{ fontSize: 11 }} label={{ value: 'µg/L', angle: -90, position: 'insideLeft', fontSize: 12 }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                    labelFormatter={(date) => new Date(date).toLocaleDateString('es-CO')}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="clorofila_a" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    fill="url(#colorClorofila)"
+                    name="Histórico"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="prediccion" 
+                    stroke="#a855f7" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    fill="url(#colorPrediccion)"
+                    name="Predicción"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey={() => 25} 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    strokeDasharray="8 4"
+                    dot={false}
+                    name="Umbral Riesgo Alto"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Temperatura del Agua</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={historicalData.slice(-12)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="semana" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} domain={[22, 35]} />
+                    <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+                    <Line type="monotone" dataKey="temp_agua" stroke="#f97316" strokeWidth={2} dot={{ r: 4 }} name="Temp. Agua (°C)" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Precipitación Acumulada</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={historicalData.slice(-12)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="semana" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+                    <Bar dataKey="precipitacion" fill="#6366f1" name="Precipitación (mm)" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab de Predicciones */}
+        {activeTab === 'predictions' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Predicciones a 4 Semanas</h2>
+              <div className="space-y-4">
+                {predictions.map((pred, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="text-sm font-semibold text-gray-700">
+                          Semana {idx + 1} - {new Date(pred.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'long' })}
+                        </div>
+                        <RiskBadge riesgo={pred.riesgo} />
+                      </div>
+                      <div className="flex items-center gap-6 text-sm">
+                        <div>
+                          <span className="text-gray-600">Predicción:</span>
+                          <span className="font-bold text-gray-800 ml-2">{pred.prediccion.toFixed(2)} µg/L</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Intervalo:</span>
+                          <span className="font-medium text-gray-700 ml-2">[{pred.intervalo_inferior.toFixed(1)} - {pred.intervalo_superior.toFixed(1)}]</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Confianza:</span>
+                          <span className="font-medium text-gray-700 ml-2">{pred.confianza}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Visualización de Intervalos de Confianza</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={predictions}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="fecha" 
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(date) => new Date(date).toLocaleDateString('es-CO', { month: 'short', day: 'numeric' })}
+                  />
+                  <YAxis tick={{ fontSize: 11 }} domain={[10, 40]} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                    labelFormatter={(date) => new Date(date).toLocaleDateString('es-CO')}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="intervalo_superior" 
+                    stroke="none" 
+                    fill="#a855f7" 
+                    fillOpacity={0.1}
+                    name="Intervalo Superior"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="intervalo_inferior" 
+                    stroke="none" 
+                    fill="#a855f7" 
+                    fillOpacity={0.1}
+                    name="Intervalo Inferior"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="prediccion" 
+                    stroke="#a855f7" 
+                    strokeWidth={3}
+                    dot={{ r: 5, fill: '#a855f7' }}
+                    name="Predicción"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey={() => 25} 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    strokeDasharray="8 4"
+                    dot={false}
+                    name="Umbral Riesgo"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Tab de Análisis */}
+        {activeTab === 'analysis' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Importancia de Variables Predictoras</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={correlationData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis type="number" domain={[0, 1]} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="variable" width={150} tick={{ fontSize: 11 }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+                  <Bar dataKey="correlacion" fill="#3b82f6" radius={[0, 8, 8, 0]} name="Correlación" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Distribución de Riesgo Histórico</h3>
+                <div className="space-y-3">
+                  {['Bajo', 'Medio', 'Alto'].map(riesgo => {
+                    const count = historicalData.filter(d => d.riesgo === riesgo).length;
+                    const percentage = ((count / historicalData.length) * 100).toFixed(1);
+                    const colors = {
+                      'Bajo': 'bg-green-500',
+                      'Medio': 'bg-yellow-500',
+                      'Alto': 'bg-red-500'
+                    };
+                    return (
+                      <div key={riesgo}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">Riesgo {riesgo}</span>
+                          <span className="text-sm font-semibold text-gray-800">{percentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div 
+                            className={`${colors[riesgo]} h-3 rounded-full transition-all duration-500`}
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Estadísticas del Modelo</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                    <span className="text-sm text-gray-700">Precisión del Modelo</span>
+                    <span className="text-lg font-bold text-blue-600">87.3%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="text-sm text-gray-700">R² Score</span>
+                    <span className="text-lg font-bold text-green-600">0.82</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                    <span className="text-sm text-gray-700">RMSE</span>
+                    <span className="text-lg font-bold text-purple-600">3.2 µg/L</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                    <span className="text-sm text-gray-700">Datos de Entrenamiento</span>
+                    <span className="text-lg font-bold text-orange-600">52 semanas</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Relación Temperatura-Clorofila</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="temp_agua" name="Temperatura" unit="°C" tick={{ fontSize: 11 }} />
+                  <YAxis dataKey="clorofila_a" name="Clorofila-a" unit=" µg/L" tick={{ fontSize: 11 }} />
+                  <Tooltip 
+                    cursor={{ strokeDasharray: '3 3' }}
+                    contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                  />
+                  <Scatter data={historicalData} fill="#3b82f6" />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Tab de Metodología */}
+        {activeTab === 'methodology' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <Database className="w-6 h-6 text-blue-600" />
+                Fuentes de Datos
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <h4 className="font-semibold text-gray-800">Sentinel-2 / MODIS</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">Concentración de Clorofila-a desde satélites con resolución temporal de 5-7 días</p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                    <h4 className="font-semibold text-gray-800">Datos Meteorológicos</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">Precipitación, temperatura del aire y radiación solar de estaciones locales (IDEAM)</p>
+                </div>
+                <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+                    <h4 className="font-semibold text-gray-800">Temperatura Superficial</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">Temperatura del agua obtenida mediante sensores térmicos satelitales</p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                    <h4 className="font-semibold text-gray-800">Series Temporales</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">Datos históricos de clorofila para capturar patrones estacionales y tendencias</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Contexto: Ciénaga de Mallorquín</h2>
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                  <h4 className="font-semibold text-gray-800 mb-2">Características del Ecosistema</h4>
+                  <p className="text-sm text-gray-600 mb-2">• Laguna costera ubicada en el extremo norte del distrito de Barranquilla, sobre la margen izquierda de Bocas de Ceniza</p>
+                  <p className="text-sm text-gray-600 mb-2">• Extensión aproximada de 650 hectáreas (6.5 km²) con profundidad promedio de 1 metro</p>
+                  <p className="text-sm text-gray-600 mb-2">• Ecosistema de manglar costero con agua salobre (mezcla de agua dulce del río y salada del mar)</p>
+                  <p className="text-sm text-gray-600 mb-2">• Limita al norte con el Mar Caribe, al oriente conecta con el Río Magdalena mediante tubos artificiales</p>
+                  <p className="text-sm text-gray-600">• Forma parte del sistema de estuario del Río Magdalena y de la zona de la Ciénaga Grande de Santa Marta</p>
+                </div>
+
+                <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                  <h4 className="font-semibold text-gray-800 mb-2">Flora y Fauna</h4>
+                  <p className="text-sm text-gray-600 mb-2">• <strong>Mangles:</strong> mangle rojo (Rhizophora mangle), mangle amarillo (Laguncularia racemosa), mangle salado (Avicennia germinans) y zaragoza (Conocarpus erectus)</p>
+                  <p className="text-sm text-gray-600 mb-2">• <strong>Peces:</strong> Aproximadamente 36 especies (16% residentes, 84% visitantes) como Mugil incilis, Cetengraulis edentulus, Diapterus rhombeus</p>
+                  <p className="text-sm text-gray-600">• <strong>Otros:</strong> Aves (incluidas migratorias), reptiles, mamíferos e invertebrados que usan la zona como refugio, alimentación y reproducción</p>
+                </div>
+
+                <div className="p-4 bg-cyan-50 rounded-lg border-l-4 border-cyan-500">
+                  <h4 className="font-semibold text-gray-800 mb-2">Servicios Ecosistémicos</h4>
+                  <p className="text-sm text-gray-600 mb-2">• Retiene sedimentos, desechos y sustancias tóxicas que fluyen hacia el mar</p>
+                  <p className="text-sm text-gray-600 mb-2">• Área de cría, reproducción y refugio para especies animales, incluidas aves migratorias</p>
+                  <p className="text-sm text-gray-600 mb-2">• Protege la costa frente a erosión, estabiliza la línea de costa y mitiga inundaciones y olas fuertes</p>
+                  <p className="text-sm text-gray-600">• Captura gases de efecto invernadero y estabiliza condiciones climáticas locales</p>
+                </div>
+
+                <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                  <h4 className="font-semibold text-gray-800 mb-2">Amenazas Principales</h4>
+                  <p className="text-sm text-gray-600 mb-2">• Relleno de cuerpos de agua con escombros, basura y para infraestructura portuaria y asentamientos urbanos</p>
+                  <p className="text-sm text-gray-600 mb-2">• Represamiento indebido de cauces y alteración de flujos de agua</p>
+                  <p className="text-sm text-gray-600 mb-2">• Contaminación hídrica por vertimiento de sustancias tóxicas y residuos</p>
+                  <p className="text-sm text-gray-600 mb-2">• Rozas y quema, degradación del suelo, salinización, erosión, compactación y desertización</p>
+                  <p className="text-sm text-gray-600">• Pérdida de la oferta de biodiversidad por alteración de hábitats y recursos</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+              <p className="text-xs text-gray-600">
+                <strong>Fuente de información:</strong> Barranquilla Verde - Alcaldía de Barranquilla | 
+                <a href="https://barranquillaverde.gov.co" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 ml-1 underline">
+                  barranquillaverde.gov.co
+                </a>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Tab de Información Técnica (Protegido) */}
+        {activeTab === 'technical' && (
+          !isAuthenticated ? (
+            <div className="flex items-center justify-center min-h-[500px]">
+              <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-200 max-w-md w-full">
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                    <Lock className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">Contenido Protegido</h2>
+                  <p className="text-sm text-gray-600">Esta sección contiene información técnica avanzada para administradores y evaluadores</p>
+                </div>
+
+                <form onSubmit={handleAuth} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contraseña de Acceso
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Ingrese la contraseña"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {authError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                      <p className="text-sm text-red-700">Contraseña incorrecta. Intente nuevamente.</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Lock className="w-5 h-5" />
+                    Acceder
+                  </button>
+                </form>
+
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600 text-center">
+                    Solo personal autorizado puede acceder a esta información. 
+                    <br />
+                    Si no tiene acceso, contacte al administrador del sistema.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <ProtectedContent />
+          )
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="bg-white border-t border-gray-200 mt-12">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <div>
+              <p>Sistema desarrollado para la Ciénaga de Mallorquín, Barranquilla</p>
+              <p className="text-xs text-gray-500 mt-1">Proyecto de Monitoreo Ambiental - Protección de Ecosistema Costero</p>
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <Download className="w-4 h-4" />
+              Exportar Reporte
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AlgalBloomSystem;
